@@ -1,0 +1,10 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.xechoz.app.lib.viewcache">
+
+    <application>
+
+        <provider
+            android:authorities="com.xechoz.app.lib.view.cache"
+            android:name=".ViewCacheProvider"/>
+    </application>
+</manifest>
