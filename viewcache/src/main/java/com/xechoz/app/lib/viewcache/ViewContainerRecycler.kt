@@ -17,9 +17,6 @@ import androidx.fragment.app.FragmentManager.FragmentLifecycleCallbacks
 
 class ActivityRecycler : IViewRecycler {
     override fun onCreate(viewPool: IViewPool) {
-        LayoutInflater.from(viewPool.appContext.applicationContext).factory =
-            LayoutInflater.Factory { name, context, attrs -> viewPool.onCreateView(name, context, attrs) }
-
         (viewPool.appContext.applicationContext as? Application)?.apply {
             registerActivityLifecycleCallbacks(object : SimpleActivityLifecycleCallbacks {
                 override fun onActivityDestroyed(activity: Activity) {
@@ -31,13 +28,13 @@ class ActivityRecycler : IViewRecycler {
     }
 }
 
-class FragmentRecycler: IViewRecycler {
+class FragmentRecycler(private val viewPool: IViewPool): IViewRecycler {
     private val fragmentCallback = object : FragmentLifecycleCallbacks() {
         override fun onFragmentViewDestroyed(fm: FragmentManager, f: Fragment) {
             super.onFragmentViewDestroyed(fm, f)
 
             (f.view as? ViewGroup)?.let {
-
+                viewPool.recycle(it)
             }
         }
     }

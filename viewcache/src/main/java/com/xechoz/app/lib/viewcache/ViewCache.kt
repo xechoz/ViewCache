@@ -5,32 +5,64 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.net.Uri
+import android.util.AttributeSet
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
+import androidx.appcompat.app.AppCompatActivity
+import java.util.*
 
-class ViewCache(context: Context) {
+class ViewCache(private val context: Context) {
     private var cacheSize = 16
     private var patcher: IPatcher = EmptyPatcher()
     private var supportView: List<IViewCache<out View>> = listOf(TextViewCache(), ImageViewCache())
     private var recyclerImpl: MutableList<IViewRecycler> = mutableListOf()
+    private val viewPool by lazy {
+        ViewPool(context)
+    }
 
-    companion object {
-        private const val TAG = "ViewCache"
-        private lateinit var context: Context
+    private lateinit var inflater: LayoutInflater
+    private lateinit var originInflater: LayoutInflater
 
-        private val instance: ViewCache by lazy {
-            ViewCache(context).apply {
-                useSetting()
+    fun wrapperInflater(from: LayoutInflater): LayoutInflater {
+        if (!this::inflater.isInitialized) {
+            originInflater = from
+            this.inflater = from.cloneInContext(context)
+
+            val compat = (context as? AppCompatActivity)?.delegate
+
+            this.inflater.factory2 = object: LayoutInflater.Factory2 {
+                override fun onCreateView(
+                    parent: View?,
+                    name: String,
+                    context: Context,
+                    attrs: AttributeSet
+                ): View? {
+                    return viewPool.onCreateView(name, context, attrs) ?: compat?.createView(parent, name, context, attrs)
+                }
+
+                override fun onCreateView(
+                    name: String,
+                    context: Context,
+                    attrs: AttributeSet
+                ): View? {
+                    return viewPool.onCreateView(name, context, attrs) ?: compat?.createView(null, name, context, attrs)
+                }
             }
         }
 
-        fun of(context: Context): ViewCache {
-            if (!this::context.isInitialized) {
-                Log.d(TAG, "init")
-                this.context = context.applicationContext
-            }
+        return inflater
+    }
 
-            return instance
+    companion object {
+        private const val TAG = "ViewCache"
+        private val cache = WeakHashMap<Context, ViewCache>()
+
+        fun of(context: Context): ViewCache {
+            return cache.getOrPut(context) {
+                Log.d(TAG, "ViewCache create instance, $context")
+                ViewCache(context)
+            }
         }
     }
 
@@ -41,7 +73,7 @@ class ViewCache(context: Context) {
         supportView: List<IViewCache<out View>> = listOf(TextViewCache(), ImageViewCache()),
         autoRecycleActivity: Boolean = true,
         autoRecycleFragment: Boolean = true
-    ) : ViewCache {
+    ): ViewCache {
         Log.d(TAG, "useSetting $cacheSize, $patcher, $supportView, $autoRecycleActivity, $autoRecycleFragment")
         this.cacheSize = cacheSize
         this.patcher = patcher
@@ -55,9 +87,12 @@ class ViewCache(context: Context) {
         }
 
         if (autoRecycleFragment) {
-            recyclerImpl.add(FragmentRecycler())
+            recyclerImpl.add(FragmentRecycler(viewPool))
         }
 
+        recyclerImpl.forEach {
+            it.onCreate(viewPool)
+        }
         return this
     }
 }
@@ -69,7 +104,7 @@ interface IPatcher {
 class EmptyPatcher : IPatcher {
 }
 
-class ViewCacheProvider: ContentProvider() {
+class ViewCacheProvider : ContentProvider() {
     override fun onCreate(): Boolean {
         context?.let {
             ViewCache.of(it)
