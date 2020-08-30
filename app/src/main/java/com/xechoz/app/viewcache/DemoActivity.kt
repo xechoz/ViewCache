@@ -1,14 +1,13 @@
 package com.xechoz.app.viewcache
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.xechoz.app.lib.viewcache.ViewCache
 import kotlinx.android.synthetic.main.activity_demo.*
-import kotlinx.android.synthetic.main.demo_fragment.view.*
 import java.util.concurrent.atomic.AtomicInteger
 
 class DemoActivity : AppCompatActivity() {
@@ -17,7 +16,8 @@ class DemoActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        ViewCache.of(this).useSetting()
+        ViewCache.of(this).setting(supportView = listOf(DemoTextViewCache()))
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_demo)
 

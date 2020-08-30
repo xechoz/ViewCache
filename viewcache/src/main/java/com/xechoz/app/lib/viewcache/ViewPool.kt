@@ -5,32 +5,14 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.view.children
-import androidx.core.view.forEach
 
 private const val TAG = "ViewCache.ViewPool"
 internal
-class ViewPool(context: Context) : IViewPool {
+class ViewPool(context: Context, private val cacheImpl: List<IViewCache<out View>>) : IViewPool {
     override val appContext: Context by lazy {
         context
     }
-
-    private val cacheImpl =
-        mapOf<IViewCache<out View>, (context: Context, name: String?, clazz: Class<out View>?) -> Boolean>(
-//            TextViewCache<TextView>() to { context, name, clazz ->
-//                (context !is AppCompatActivity)
-//                        && ("TextView" == name || clazz?.canonicalName == TextView::class.java.canonicalName)
-//            },
-
-            TextViewCache<AppCompatTextView>() to { context, name, clazz ->
-                (context is AppCompatActivity)
-                        && ("TextView" == name || name.orEmpty().endsWith("AppCompatTextView")
-                        || clazz?.canonicalName == AppCompatTextView::class.java.canonicalName)
-            }
-        )
 
     private var missCount = 0
     private var hitCount = 0
@@ -63,18 +45,12 @@ class ViewPool(context: Context) : IViewPool {
         Log.d(TAG, "doRecycleView $view")
         findCacheImpl(view.context, "", view::class.java)?.let {
             (view.parent as? ViewGroup)?.removeView(view)
-            it.recycle(view)
+            (it as IViewCache<View>).recycle(view)
         }
     }
 
-    private fun findCacheImpl(context: Context, name: String?, clazz: Class<out View>?): IViewCache<View>? {
-        for ((k, isMatch) in cacheImpl) {
-            if (isMatch(context, name, clazz)) {
-                return k as IViewCache<View>
-            }
-        }
-
-        return null
+    private fun findCacheImpl(context: Context, name: String?, clazz: Class<out View>?): IViewCache<out View>? {
+        return cacheImpl.find { it.isMatch(context, name, clazz) }
     }
 
     override fun recycle(view: View) {
@@ -99,8 +75,6 @@ class ViewPool(context: Context) : IViewPool {
     }
 
     override fun onTrimMemory() {
-        cacheImpl.keys.forEach {
-            it.clear()
-        }
+        cacheImpl.forEach { it.clear() }
     }
 }

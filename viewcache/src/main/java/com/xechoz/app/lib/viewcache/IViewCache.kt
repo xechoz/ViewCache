@@ -1,6 +1,5 @@
 package com.xechoz.app.lib.viewcache
 
-import android.app.Application
 import android.content.Context
 import android.util.AttributeSet
 import android.util.Log
@@ -11,6 +10,7 @@ import java.util.*
 private const val TAG = "ViewCache"
 
 interface IViewCache<T : View> {
+    fun isMatch(context: Context, name: String?, clazz: Class<out View>?): Boolean
     fun recycle(view: T)
     fun onCreateView(name: String, context: Context, attrs: AttributeSet): T?
     fun clear()

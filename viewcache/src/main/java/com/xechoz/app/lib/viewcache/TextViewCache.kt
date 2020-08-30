@@ -5,12 +5,15 @@ import android.content.Context
 import android.graphics.Color
 import android.util.AttributeSet
 import android.util.Log
+import android.view.View
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.view.setPadding
 
 private const val TAG = "ViewCache.TextViewCache"
 
-class TextViewCache<T : TextView> : AbsViewCache<T>() {
+open class TextViewCache<T : TextView> : AbsViewCache<T>() {
    private val attrFun = mapOf<String, (textView: TextView, attr: AttributeSet, index: Int, reset: Boolean) -> Unit>(
         "text" to { textView, attr, index, reset ->
             textView.text = if (reset) "" else attr.getAttributeValue(index)
@@ -66,6 +69,12 @@ class TextViewCache<T : TextView> : AbsViewCache<T>() {
 
     private val commonAttr = arrayOf("background", "id", "visible", "padding", "paddingLeft")
     private val allAttr = arrayOf("text", "textSize", "textColor", "textAlign")
+
+    override fun isMatch(context: Context, name: String?, clazz: Class<out View>?): Boolean {
+       return (context is AppCompatActivity)
+                && ("TextView" == name || name.orEmpty().endsWith("AppCompatTextView")
+                || clazz?.canonicalName == AppCompatTextView::class.java.canonicalName)
+    }
 
     override fun recycle(view: T) {
         super.recycle(view)

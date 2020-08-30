@@ -17,9 +17,7 @@ class ViewCache(private val context: Context) {
     private var patcher: IPatcher = EmptyPatcher()
     private var supportView: List<IViewCache<out View>> = listOf(TextViewCache(), ImageViewCache())
     private var recyclerImpl: MutableList<IViewRecycler> = mutableListOf()
-    private val viewPool by lazy {
-        ViewPool(context)
-    }
+    private lateinit var viewPool: ViewPool
 
     private lateinit var inflater: LayoutInflater
     private lateinit var originInflater: LayoutInflater
@@ -67,7 +65,7 @@ class ViewCache(private val context: Context) {
     }
 
     @JvmOverloads
-    fun useSetting(
+    fun setting(
         cacheSize: Int = 16,
         patcher: IPatcher = EmptyPatcher(),
         supportView: List<IViewCache<out View>> = listOf(TextViewCache(), ImageViewCache()),
@@ -78,7 +76,7 @@ class ViewCache(private val context: Context) {
         this.cacheSize = cacheSize
         this.patcher = patcher
         this.supportView = supportView
-
+        this.viewPool = ViewPool(context, supportView)
         recyclerImpl.clear()
         recyclerImpl.add(ApplicationRecycler())
 
